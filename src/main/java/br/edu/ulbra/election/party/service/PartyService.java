@@ -10,33 +10,32 @@ import org.apache.commons.lang.StringUtils;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Type;
-import java.security.GeneralSecurityException;
 import java.util.List;
 
+@Service
 public class PartyService {
     private final PartyRepository partyRepository;
     private final ModelMapper modelMapper;
-    private final PasswordEncoder passwordEncoder;
 
     private static final String MESSAGE_INVALID_ID = "Invalid id";
     private static final String MESSAGE_PARTY_NOT_FOUND = "Party not found";
 
     @Autowired
-    public PartyService(PartyRepository partyRepository, ModelMapper modelMapper, PasswordEncoder passwordEncoder){
+    public PartyService(PartyRepository partyRepository, ModelMapper modelMapper){
         this.partyRepository = partyRepository;
         this.modelMapper = modelMapper;
-        this.passwordEncoder = passwordEncoder;
     }
 
     public List<PartyOutput> getAll(){
         Type partyOutputListType = new TypeToken<List<PartyOutput>>(){}.getType();
+        return modelMapper.map(partyRepository.findAll(), partyOutputListType);
     }
 
     public PartyOutput create(PartyInput partyInput){
-        validateInput(PartyInput,false);
+        this.validateInput(partyInput);
         Party party = modelMapper.map(partyInput, Party.class);
         party = partyRepository.save(party);
         return modelMapper.map(party, PartyOutput.class);
@@ -44,7 +43,7 @@ public class PartyService {
 
     public PartyOutput getById(Long partyId){
         if(partyId == null){
-            throw new GeneralSecurityException(MESSAGE_INVALID_ID);
+            throw new GenericOutputException(MESSAGE_INVALID_ID);
         }
 
         Party party = partyRepository.findById(partyId).orElse(null);
@@ -55,23 +54,48 @@ public class PartyService {
         return modelMapper.map(party, PartyOutput.class);
     }
 
-    public PartyOutput Update(Long partyId, PartyInput){
+    public PartyOutput update(Long partyId, PartyInput partyInput){
+        if (partyId == null){
+            throw new GenericOutputException(MESSAGE_INVALID_ID);
+        }
+        validateInput(partyInput);
+        Party party = partyRepository.findById(partyId).orElse(null);
 
+        if(party == null){
+            throw new GenericOutputException(MESSAGE_PARTY_NOT_FOUND);
+        }
+
+        party.setCode(partyInput.getCode());
+        party.setName(partyInput.getName());
+        party.setNumber(partyInput.getNumber());
+        party = partyRepository.save(party);
+        return modelMapper.map(party, PartyOutput.class);
     }
 
-    public GenericOutput delete(Long paryId){
+    public GenericOutput delete(Long partyId){
+        if(partyId == null){
+            throw new GenericOutputException(MESSAGE_INVALID_ID);
+        }
 
+        Party party = partyRepository.findById(partyId).orElse(null);
+        if(party == null){
+            throw new GenericOutputException(MESSAGE_PARTY_NOT_FOUND);
+        }
+
+        partyRepository.delete(party);
+
+        return new GenericOutput("Party deleted");
     }
 
-    private void validateInput(PartyInput partyInput, boolean isUpdate){
+    private void validateInput(PartyInput partyInput){
         if(StringUtils.isBlank(partyInput.getCode())){
             throw new GenericOutputException("Invalid code");
         }
         if(StringUtils.isBlank(partyInput.getName())){
             throw new GenericOutputException("Invalid name");
         }
-        if (StringUtils.isBlank(partyInput.getNumber())){
-            throws new GenericOutputException("Invalid number");
+        if(partyInput.getNumber() == null){
+            throw new GenericOutputException("Invalid number");
         }
     }
 }

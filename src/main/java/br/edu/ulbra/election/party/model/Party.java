@@ -8,14 +8,14 @@ public class Party {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(unique = true, nullable = false)
     private String code;
 
     @Column(nullable = false)
     private String name;
 
     @Column(nullable = false)
-    private String number;
+    private Integer number;
 
     public Long getId() {
         return id;
@@ -41,11 +41,11 @@ public class Party {
         this.name = name;
     }
 
-    public String getNumber() {
+    public Integer getNumber() {
         return number;
     }
 
-    public void setNumber(String number) {
+    public void setNumber(Integer number) {
         this.number = number;
     }
 }
