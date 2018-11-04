@@ -91,11 +91,47 @@ public class PartyService {
         if(StringUtils.isBlank(partyInput.getCode())){
             throw new GenericOutputException("Invalid code");
         }
+        if(validateCode(partyInput.getCode())){
+            throw new GenericOutputException("Invalid code! Code already exists.");
+        }
         if(StringUtils.isBlank(partyInput.getName())){
+            throw new GenericOutputException("Invalid name");
+        }
+        if(validateName(partyInput.getName())){
             throw new GenericOutputException("Invalid name");
         }
         if(partyInput.getNumber() == null){
             throw new GenericOutputException("Invalid number");
         }
+        if(validateNumber(partyInput.getNumber())){
+            throw new GenericOutputException("Invalid number! Number already exists or is in wrong format.");
+        }
+    }
+    private boolean validateName(String name){
+        if(name.split(" ")[0].length() < 5){// verificando a quantidade de caracteres do primeiro nome
+            return true;
+        }
+        return false;
+    }
+    private boolean validateCode(String code){
+        List<Party> partyList = (List<Party>) partyRepository.findAll();
+        for (Party party : partyList){
+            if(party.getCode().equals(code)){
+                return true;
+            }
+        }
+        return false;
+    }
+    private boolean validateNumber(Integer number){
+        List<Party> partyList = (List<Party>) partyRepository.findAll();
+        if(number.toString().length() != 2){
+            return true;
+        }
+        for (Party party : partyList){
+            if(party.getNumber() == number){
+                return true;
+            }
+        }
+        return false;
     }
 }
