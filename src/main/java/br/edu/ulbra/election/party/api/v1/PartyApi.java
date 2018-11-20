@@ -17,7 +17,7 @@ public class PartyApi {
     private final PartyService partyService;
 
     @Autowired
-    public PartyApi(PartyService partyService) {
+    public PartyApi(PartyService partyService){
         this.partyService = partyService;
     }
 

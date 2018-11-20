@@ -8,16 +8,17 @@ import br.edu.ulbra.election.party.output.v1.PartyOutput;
 import br.edu.ulbra.election.party.repository.PartyRepository;
 import org.apache.commons.lang.StringUtils;
 import org.modelmapper.ModelMapper;
-import org.modelmapper.TypeToken;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.lang.reflect.Type;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class PartyService {
+
     private final PartyRepository partyRepository;
+
     private final ModelMapper modelMapper;
 
     private static final String MESSAGE_INVALID_ID = "Invalid id";
@@ -30,38 +31,40 @@ public class PartyService {
     }
 
     public List<PartyOutput> getAll(){
-        Type partyOutputListType = new TypeToken<List<PartyOutput>>(){}.getType();
-        return modelMapper.map(partyRepository.findAll(), partyOutputListType);
+        List<Party> partyList = (List<Party>)partyRepository.findAll();
+        return partyList.stream().map(Party::toPartyOutput).collect(Collectors.toList());
     }
 
-    public PartyOutput create(PartyInput partyInput){
-        this.validateInput(partyInput);
+    public PartyOutput create(PartyInput partyInput) {
+        validateInput(partyInput);
+        validateDuplicate(partyInput, null);
         Party party = modelMapper.map(partyInput, Party.class);
         party = partyRepository.save(party);
-        return modelMapper.map(party, PartyOutput.class);
+        return Party.toPartyOutput(party);
     }
 
     public PartyOutput getById(Long partyId){
-        if(partyId == null){
+        if (partyId == null){
             throw new GenericOutputException(MESSAGE_INVALID_ID);
         }
 
         Party party = partyRepository.findById(partyId).orElse(null);
-        if(party == null){
+        if (party == null){
             throw new GenericOutputException(MESSAGE_PARTY_NOT_FOUND);
         }
 
         return modelMapper.map(party, PartyOutput.class);
     }
 
-    public PartyOutput update(Long partyId, PartyInput partyInput){
+    public PartyOutput update(Long partyId, PartyInput partyInput) {
         if (partyId == null){
             throw new GenericOutputException(MESSAGE_INVALID_ID);
         }
         validateInput(partyInput);
-        Party party = partyRepository.findById(partyId).orElse(null);
+        validateDuplicate(partyInput, partyId);
 
-        if(party == null){
+        Party party = partyRepository.findById(partyId).orElse(null);
+        if (party == null){
             throw new GenericOutputException(MESSAGE_PARTY_NOT_FOUND);
         }
 
@@ -72,13 +75,13 @@ public class PartyService {
         return modelMapper.map(party, PartyOutput.class);
     }
 
-    public GenericOutput delete(Long partyId){
-        if(partyId == null){
+    public GenericOutput delete(Long partyId) {
+        if (partyId == null){
             throw new GenericOutputException(MESSAGE_INVALID_ID);
         }
 
         Party party = partyRepository.findById(partyId).orElse(null);
-        if(party == null){
+        if (party == null){
             throw new GenericOutputException(MESSAGE_PARTY_NOT_FOUND);
         }
 
@@ -87,51 +90,27 @@ public class PartyService {
         return new GenericOutput("Party deleted");
     }
 
+    private void validateDuplicate(PartyInput partyInput, Long id){
+        Party party = partyRepository.findFirstByCode(partyInput.getCode());
+        if (party != null && !party.getId().equals(id)){
+            throw new GenericOutputException("Duplicate Code");
+        }
+        party = partyRepository.findFirstByNumber(partyInput.getNumber());
+        if (party != null && !party.getId().equals(id)){
+            throw new GenericOutputException("Duplicate Number");
+        }
+    }
+
     private void validateInput(PartyInput partyInput){
-        if(StringUtils.isBlank(partyInput.getCode())){
-            throw new GenericOutputException("Invalid code");
+        if (StringUtils.isBlank(partyInput.getName()) || partyInput.getName().trim().length() < 5){
+            throw new GenericOutputException("Invalid Name");
         }
-        if(validateCode(partyInput.getCode())){
-            throw new GenericOutputException("Invalid code! Code already exists.");
+        if (StringUtils.isBlank(partyInput.getCode())){
+            throw new GenericOutputException("Invalid Code");
         }
-        if(StringUtils.isBlank(partyInput.getName())){
-            throw new GenericOutputException("Invalid name");
-        }
-        if(validateName(partyInput.getName())){
-            throw new GenericOutputException("Invalid name");
-        }
-        if(partyInput.getNumber() == null){
-            throw new GenericOutputException("Invalid number");
-        }
-        if(validateNumber(partyInput.getNumber())){
-            throw new GenericOutputException("Invalid number! Number already exists or is in wrong format.");
+        if (partyInput.getNumber() == null || partyInput.getNumber() < 10 || partyInput.getNumber() > 99){
+            throw new GenericOutputException("Invalid Party Number");
         }
     }
-    private boolean validateName(String name){
-        if(name.split(" ")[0].length() < 5){// verificando a quantidade de caracteres do primeiro nome
-            return true;
-        }
-        return false;
-    }
-    private boolean validateCode(String code){
-        List<Party> partyList = (List<Party>) partyRepository.findAll();
-        for (Party party : partyList){
-            if(party.getCode().equals(code)){
-                return true;
-            }
-        }
-        return false;
-    }
-    private boolean validateNumber(Integer number){
-        List<Party> partyList = (List<Party>) partyRepository.findAll();
-        if(number.toString().length() != 2){
-            return true;
-        }
-        for (Party party : partyList){
-            if(party.getNumber() == number){
-                return true;
-            }
-        }
-        return false;
-    }
+
 }
