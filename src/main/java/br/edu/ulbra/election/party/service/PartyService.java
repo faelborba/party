@@ -1,8 +1,10 @@
 package br.edu.ulbra.election.party.service;
 
+import br.edu.ulbra.election.party.client.CandidateClientService;
 import br.edu.ulbra.election.party.exception.GenericOutputException;
 import br.edu.ulbra.election.party.input.v1.PartyInput;
 import br.edu.ulbra.election.party.model.Party;
+import br.edu.ulbra.election.party.output.v1.CandidateOutput;
 import br.edu.ulbra.election.party.output.v1.GenericOutput;
 import br.edu.ulbra.election.party.output.v1.PartyOutput;
 import br.edu.ulbra.election.party.repository.PartyRepository;
@@ -18,16 +20,17 @@ import java.util.stream.Collectors;
 public class PartyService {
 
     private final PartyRepository partyRepository;
-
     private final ModelMapper modelMapper;
+    private final CandidateClientService candidateClientService;
 
     private static final String MESSAGE_INVALID_ID = "Invalid id";
     private static final String MESSAGE_PARTY_NOT_FOUND = "Party not found";
 
     @Autowired
-    public PartyService(PartyRepository partyRepository, ModelMapper modelMapper){
+    public PartyService(PartyRepository partyRepository, ModelMapper modelMapper, CandidateClientService candidateClientService){
         this.partyRepository = partyRepository;
         this.modelMapper = modelMapper;
+        this.candidateClientService = candidateClientService;
     }
 
     public List<PartyOutput> getAll(){
@@ -68,6 +71,17 @@ public class PartyService {
             throw new GenericOutputException(MESSAGE_PARTY_NOT_FOUND);
         }
 
+        int i = 0;
+        List<CandidateOutput> candidateOutputs = this.candidateClientService.getAll();
+        for (CandidateOutput output: candidateOutputs) {
+            if(output.getPartyOutput().getId() == partyId){
+                i++;
+            }
+        }
+        if(i>0){
+            throw new GenericOutputException("Party contains candidates.");
+        }
+
         party.setCode(partyInput.getCode());
         party.setName(partyInput.getName());
         party.setNumber(partyInput.getNumber());
@@ -83,6 +97,17 @@ public class PartyService {
         Party party = partyRepository.findById(partyId).orElse(null);
         if (party == null){
             throw new GenericOutputException(MESSAGE_PARTY_NOT_FOUND);
+        }
+
+        int i = 0;
+        List<CandidateOutput> candidateOutputs = this.candidateClientService.getAll();
+        for (CandidateOutput output: candidateOutputs) {
+            if(output.getPartyOutput().getId() == partyId){
+                i++;
+            }
+        }
+        if(i>0){
+            throw new GenericOutputException("Party contains candidates.");
         }
 
         partyRepository.delete(party);
